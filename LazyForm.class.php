@@ -1,8 +1,4 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-
 class LazyForm
 {
     private $fields;
@@ -146,7 +142,7 @@ class LazyForm
             isset($formSettings['columns'])     ? $columns          = $formSettings['columns']*2      : $columns        = $formDefaults['columns']*2;
             isset($formSettings['order'])       ? $order            = $formSettings['order']          : $order          = $formDefaults['order'];
 
-            isset($onsubmit) ? $onsubmitStr = $onsubmit : $onsubmitStr = "";
+            isset($onsubmit) ? $onsubmitStr = ' onsubmit="'.$onsubmit.'"' : $onsubmitStr = "";
 
             $output = <<<TEMPLATE
 
@@ -239,10 +235,11 @@ TEMPLATE;
 
 
                 $fFieldColspan === 1 ? $fieldColspan = "" : $fieldColspan = ' colspan="'.$fFieldColspan.'"';    
+                isset($errors[$key]) ? $error = $errors[$key] : $error = "";
                 $output .= <<<TEMPLATE
 
         <td{$fieldColspan}>
-            {$fieldMarkup}
+            {$fieldMarkup}{$error}
         </td>
 TEMPLATE;
                 $column += $fFieldColspan;
@@ -254,7 +251,70 @@ TEMPLATE;
             $this->formMarkup = $output;
     }
 
-    function getFormMarkup()
+    public function validate()
+    {
+        /*
+            Not usable in current state
+        */
+        $this->errors = array();
+        $this->fields;
+        foreach($this->fields AS $key => $field)
+        {
+            $this->errors[] = self::validateField($field['value'], $field['validation']);
+        }
+        return isset($errors[0]);
+    }
+
+    public static function validateField($value, $validation)
+    {
+        switch($validation)
+        {
+            case "required" : return self::validateRequired($value); break;
+            case "phone" : return self::validatePhone($value); break;
+            case "email" : return self::validateEmail($value); break;
+            case "alnum" : return self::validateAlnum($value); break;
+            case "username" : return self::validateUsername($value); break;
+            default: return self::validateRegex($value, $validation);
+        }
+    }
+
+    private static function validateRequired($value)
+    {
+        return !empty($value);
+    }
+
+    private static function validatePhone($value)
+    {
+        return preg_match('/[0-9]{10}/', preg_replace('/[^0-9]*/', $value));
+    }
+
+    private static function validateEmail($value)
+    {
+        return filter_var($value, FILTER_VALIDATE_EMAIL);
+    }
+
+    private static function validateAlnum($value)
+    {
+        return ctype_alnum($value);
+    }
+
+    private static function validateUsername($value)
+    {
+        $valid = array('_', '-', '.');
+        return ctype_alnum(str_replace($valid, '', $value));
+    }
+
+    private static function validateRegex($value, $regex)
+    {
+        return preg_match($regex, $value);
+    }
+
+    public static function getErrors()
+    {
+        return $this->errors;
+    }
+
+    public function getFormMarkup()
     {
         return $this->formMarkup;
     }
