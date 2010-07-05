@@ -1,3 +1,8 @@
+<?php
+session_start();
+unset($_SESSION['lazyForm']);
+?>
+
 <!DOCTYPE html
     PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
@@ -27,8 +32,9 @@ $formSettings = array('columns' => 2,
                       'errors' => array (
                             'test1' => 'Required'));
 
-$form = new LazyForm($fields, $formSettings);
+$form = LazyForm::getInstance('test', $fields, $formSettings);
 $form->generateForm();
+$form->saveForm();
 echo $form->getFormMarkup();
 ?>
 </body>

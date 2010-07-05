@@ -1,14 +1,78 @@
 <?php
 class LazyForm
 {
+    private $forms;
+    private $name;
     private $fields;
     private $formSettings;
     private $formMarkup;
 
-    public function LazyForm($fields, $formSettings)
+    public function LazyForm($name=null, $fields=null, $formSettings=null)
     {
-        $this->fields = $fields;
-        $this->formSettings = $formSettings;
+        if(isset($name))
+        {
+            $form = new LazyForm();
+            $form->name = $name;
+            $form->fields = $fields;
+            $form->formSettings = $formSettings;
+            $this->forms[$name] = $form;
+        }
+    }
+
+    public function getInstance($name, $fields=false, $formSettings=false)
+    {
+        if(isset($_SESSION['lazyForm']))
+        {
+            $form = unserialize($_SESSION['lazyForm']);
+            $form = $form->getForm($name);
+            if(!$form)
+                return self::createForm($name, $fields, $formSettings);
+            else
+                return $form;
+        }
+        else
+        {
+            $form = new LazyForm($name, $fields, $formSettings);
+            $_SESSION['lazyForm'] = serialize($form);
+            return $form->getForm($name);
+        }
+    }
+
+    public function saveForm()
+    {
+        $form = unserialize($_SESSION['lazyForm']);
+        $form->setForm($this);
+        $_SESSION['lazyForm'] = serialize($form);
+    }
+
+    public function setName($name)
+    {
+        $this->name = $name;
+    }
+
+    public function getName()
+    {
+        return $this->name;
+    }
+
+    private static function createForm($name, $fields, $formSettings)
+    {
+        $form = new LazyForm($name, $fields, $formSettings);
+        $form->setName($name);
+        return $form->getForm($name);
+    }
+
+    public function setForm($form)
+    {
+        $this->forms[$form->getName()] = $form;
+    }
+
+    public function getForm($name)
+    {
+        if(isset($this->forms[$name]))
+            return $this->forms[$name];
+        else
+            return false;
     }
 
     public function render()
@@ -265,51 +329,51 @@ TEMPLATE;
         return isset($errors[0]);
     }
 
-    public static function validateField($value, $validation)
+    public function validateField($value, $validation)
     {
         switch($validation)
         {
-            case "required" : return self::validateRequired($value); break;
-            case "phone" : return self::validatePhone($value); break;
-            case "email" : return self::validateEmail($value); break;
-            case "alnum" : return self::validateAlnum($value); break;
-            case "username" : return self::validateUsername($value); break;
-            default: return self::validateRegex($value, $validation);
+            case "required" : return $this->validateRequired($value); break;
+            case "phone" : return $this->validatePhone($value); break;
+            case "email" : return $this->validateEmail($value); break;
+            case "alnum" : return $this->validateAlnum($value); break;
+            case "username" : return $this->validateUsername($value); break;
+            default: return $this->validateRegex($value, $validation);
         }
     }
 
-    private static function validateRequired($value)
+    private function validateRequired($value)
     {
         return !empty($value);
     }
 
-    private static function validatePhone($value)
+    private function validatePhone($value)
     {
         return preg_match('/[0-9]{10}/', preg_replace('/[^0-9]*/', $value));
     }
 
-    private static function validateEmail($value)
+    private function validateEmail($value)
     {
         return filter_var($value, FILTER_VALIDATE_EMAIL);
     }
 
-    private static function validateAlnum($value)
+    private function validateAlnum($value)
     {
         return ctype_alnum($value);
     }
 
-    private static function validateUsername($value)
+    private function validateUsername($value)
     {
         $valid = array('_', '-', '.');
         return ctype_alnum(str_replace($valid, '', $value));
     }
 
-    private static function validateRegex($value, $regex)
+    private function validateRegex($value, $regex)
     {
         return preg_match($regex, $value);
     }
 
-    public static function getErrors()
+    public function getErrors()
     {
         return $this->errors;
     }
